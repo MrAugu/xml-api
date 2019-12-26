@@ -1,21 +1,14 @@
-// const start  = async () => {
-//     const ctx = await fetch("https://www.growtopiagame.com/forums/external.php?type=RSS2&forumids=43&lastpost=1").then(res => res.text());
-//     console.log(xmlParser.toJson(ctx));
-// }
-
-// start();
-
-// const clients = {
-//   "dc019010": "XPGFR-1290102052245673",
-//   "superuser": "mrbest1010"
-// };
-
 const fetch = require("node-fetch");
 const xmlParser = require("xml2json");
 const express = require("express");
 const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const app = express();
+const clients = {
+  "growcord": "XAGF-19078023",
+  "datacell": "XAGF-12556734"
+};
+// http://localhost:5051/xml-parser/growtopia-forums-rss?forumid=33&images=true&clientid=growcord&secret=XAGF-19078023
 
 app.use(bodyParser.urlencoded({
   extended: true
@@ -30,7 +23,14 @@ app.get("/xml-parser/growtopia-forums-rss", async (req, res) => {
   const forum = req.query.forumid;
   const images = req.query.images || false;
 
-  const ctx = await fetch(`https://www.growtopiagame.com/forums/external.php?type=RSS2&forumids=${forum}`).then(res => res.text());
+  if (!forum) return res.status(400).send(JSON.stringify({ "code": 400, "errMsg": "Bad Request." }, null, 4));
+  if (!clientID) return res.status(400).send(JSON.stringify({ "code": 400, "errMsg": "Bad Request." }, null, 4));
+  if (!secret) return res.status(400).send(JSON.stringify({ "code": 400, "errMsg": "Bad Request." }, null, 4));
+
+  if (!clients[clientID]) return res.status(403).send(JSON.stringify({ "code": 403, "errMsg": "Forbidden. Invalid clientid/secret pair." }, null, 4));
+  if (clients[clientID] !== secret) return res.status(403).send(JSON.stringify({ "code": 403, "errMsg": "Forbidden. Invalid clientid/secret pair." }, null, 4));
+
+  const ctx = await fetch(`https://www.growtopiagame.com/forums/external.php?type=RSS2&forumids=${forum}&lastpost=1`).then(res => res.text());
   const json = JSON.parse(xmlParser.toJson(ctx));
   const payload = {
     code: 200,
@@ -46,14 +46,8 @@ app.get("/xml-parser/growtopia-forums-rss", async (req, res) => {
     decoded_content = decoded_content.replace(/<li>/ig, "  *  ");
     decoded_content = decoded_content.replace(/<\/ul>/ig, "\n");
     decoded_content = decoded_content.replace(/<\/p>/ig, "\n");
+    decoded_content = decoded_content.replaceAll('<img class="inlineimg" src="images/buttons/viewpost.gif" alt="View Post" />', "");
     decoded_content = decoded_content.replace(/<br\s*[\/]?>/gi, "\n");
-    decoded_content = decoded_content.replace(/<[^>]+>/ig, "");
-    decoded_content = decoded_content.replace(/(\r\n|\r|\n){2,}/g, "$1\n");
-    decoded_content = decoded_content.replaceAll(":\n\n\t\n\t\t\n\t\t\n\t\t\t\n\t\t\t\t", " - ");
-    decoded_content = decoded_content.replaceAll("\n\t\t\t\t\n\t\t\t\n\n\t\t\t", "\n\n");
-    decoded_content = decoded_content.replaceAll("\n\n\t\t\t\n\t\t\n\t\n\n", "\n\n");
-    decoded_content = escapeHtml(decoded_content);
-    decoded_content = decoded_content.trim();
 
     if (imgLinks.length > 0 && images) {
         for (var i = 0; i < occurrences(json.rss.channel.item[q]["content:encoded"], "<img", false); i++) {
@@ -66,12 +60,22 @@ app.get("/xml-parser/growtopia-forums-rss", async (req, res) => {
         }
     }
 
+    decoded_content = decoded_content.replace(/<[^>]+>/ig, "");
+    decoded_content = decoded_content.replace(/(\r\n|\r|\n){2,}/g, "$1\n");
+    decoded_content = decoded_content.replaceAll(":\n\n\t\n\t\t\n\t\t\n\t\t\t\n\t\t\t\t", " - ");
+    decoded_content = decoded_content.replaceAll("\n\t\t\t\t\n\t\t\t\n\n\t\t\t", "\n\n");
+    decoded_content = decoded_content.replaceAll("\n\n\t\t\t\n\t\t\n\t\n\n", "\n\n");
+    decoded_content = decoded_content.replaceAll("\n\t\t\t\t", "\n\n");
+    decoded_content = decoded_content.replaceAll("\n\t\t\t\n\n\t\t\t", "\n\n");
+    decoded_content = escapeHtml(decoded_content);
+    decoded_content = decoded_content.trim();
+
     if (decoded_content.includes("Attached Images")) decoded_content = decoded_content.split("Attached Images")[0].trim();
 
     if (imgLinks.length > 0) {
         var links = [];
-        for (var y = 0; i < imgLinks.length; i++) {
-        if (!links.includes(imgLinks[y])) links.push(imgLinks[y]);
+        for (var y = 0; y < imgLinks.length; y++) {
+          if (!imgLinks[y].includes(";stc=1&amp;") && imgLinks[y].startsWith("https://")) links.push(imgLinks[y]);
         }
         imgLinks = links;
     }
@@ -87,7 +91,7 @@ app.get("/xml-parser/growtopia-forums-rss", async (req, res) => {
 
     payload["subforum"] = json.rss.channel.item[q].category["$t"];
     payload["subforumUrl"] = json.rss.channel.item[q].category.domain;
-    
+
     if (images) {
       var imgs = {};
 
@@ -149,4 +153,4 @@ function escapeHtml(unsafe) {
       .replace(/&quot;/g, '"')
       .replace(/&#039;/g, "'")
       .replace(/&apos;/g, "'");
- }
+}
