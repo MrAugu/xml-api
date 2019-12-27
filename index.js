@@ -16,7 +16,7 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 app.use(helmet())
 
-app.get("/xml-parser/growtopia-forums-rss", async (req, res) => {
+app.get("/api/xml-parser", async (req, res) => {
   res.set("Content-Type", "application/json");
   const clientID = req.query.clientid;
   const secret = req.query.secret;
