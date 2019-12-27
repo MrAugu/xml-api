@@ -178,6 +178,8 @@ app.get("/api/xml-parser/latest", async (req, res) => {
     itemPayload["author"] = json.rss.channel.item[q]["dc:creator"];
     itemPayload["threadLink"] = json.rss.channel.item[q]["guid"]["$t"];
     itemPayload["postLink"] = json.rss.channel.item[q].link;
+    itemPayload["subforum"] = json.rss.channel.item[q].category["$t"];
+    itemPayload["subforumUrl"] = json.rss.channel.item[q].category.domain;
 
     if (images) {
       var imgs = {};
