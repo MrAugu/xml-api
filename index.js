@@ -5,8 +5,7 @@ const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const app = express();
 const clients = {
-  "growcord": "XAGF-19078023",
-  "datacell": "XAGF-12556734"
+  "growcord": "XAGF-19078023"
 };
 
 app.use(bodyParser.urlencoded({
